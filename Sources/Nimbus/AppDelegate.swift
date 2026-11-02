@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.island = island
         self.settingsWindow = settingsWindow
         installStatusItem()
+        welcomeFirstTimeUsers()
 
         // Handy for screenshots: NIMBUS_SETTINGS=1 opens the window at launch.
         if ProcessInfo.processInfo.environment["NIMBUS_SETTINGS"] != nil { settingsWindow.show() }
@@ -53,6 +54,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         lines.append("mode \(state.mode) selected=\(state.selectedWidget?.id ?? "-") live=\(state.liveWidget?.id ?? "-")")
         return lines.joined(separator: "\n")
+    }
+
+    /// Nimbus has no Dock icon, so the first time it runs, say where it is.
+    private func welcomeFirstTimeUsers() {
+        let key = "nimbus.welcomed.v1"
+        guard !UserDefaults.standard.bool(forKey: key),
+              ProcessInfo.processInfo.environment["NIMBUS_DEMO"] == nil else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.5))
+            NotificationsStore.shared.post(
+                symbol: "sparkles", title: "Welcome to Nimbus",
+                line: "Move your mouse over the notch to open me"
+            )
+        }
     }
 
     private func installStatusItem() {

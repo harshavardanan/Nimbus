@@ -13,8 +13,8 @@ to start), and opens into a full widget when you hover it.
 
 Built with SwiftUI and AppKit. No account, no tracking, no server of ours.
 
-> **Status: early (v0.1).** It works and is tested on a notched MacBook, but it isn't notarized yet, so you
-> build it yourself (one command). See [Known limitations](#known-limitations).
+> **Status: early (v0.1).** It works and is tested on a notched MacBook. It isn't notarized yet, so macOS asks
+> you to allow it once. See [Known limitations](#known-limitations).
 
 ## Widgets
 
@@ -37,24 +37,45 @@ Built with SwiftUI and AppKit. No account, no tracking, no server of ours.
 **Using it:** hover the notch to open it. The icons on both sides of the notch switch widgets, and so does a
 sideways two-finger swipe. The gear opens Settings.
 
-## Requirements
+## Download
 
-- A Mac running **macOS 14 (Sonoma) or later**. A notched MacBook gives the best result; on other Macs
-  Nimbus draws a small pill at the top centre instead.
-- The Xcode command line tools (`xcode-select --install`) to build it.
+**[Download Nimbus for Mac](https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip)**
+(about 1 MB) · [Website](https://harshavardanan.github.io/Nimbus/) · [All releases](https://github.com/harshavardanan/Nimbus/releases)
 
-## Install
+Needs a Mac with **Apple silicon (M1 or later)** and **macOS 14 (Sonoma) or newer**. A notched MacBook gives the
+best result; on other Macs Nimbus draws a small pill at the top centre instead.
 
-Nimbus isn't notarized yet, so you build it from source:
+## Install (no coding needed)
+
+1. **Open the zip** you downloaded (double-click it in your Downloads folder).
+2. **Drag Nimbus into your Applications folder**, then double-click it. macOS will say it can't verify the
+   app. Click **Done**.
+3. **Allow it once.** Open **Apple menu → System Settings → Privacy & Security**, scroll down, and click
+   **Open Anyway** next to "Nimbus was blocked". Enter your password.
+4. **Double-click Nimbus again** and click **Open**.
+
+That's all. Nimbus has no Dock icon: look for its small icon at the top right of your menu bar, and move your
+mouse over the notch. It welcomes you the first time.
+
+> **Why the warning?** Apple charges developers $99 a year to register apps, and Nimbus is a free open-source
+> project that hasn't done that yet. The whole source is here for anyone to read. If step 3 doesn't show
+> "Open Anyway", open the Terminal app, paste `xattr -dr com.apple.quarantine /Applications/Nimbus.app`,
+> press Return, and open Nimbus again.
+
+To remove it: choose **Quit** from its menu bar icon, then drag Nimbus from Applications to the Trash.
+
+### Build it yourself (for developers)
+
+You need Apple's command line tools (`xcode-select --install`).
 
 ```sh
 git clone https://github.com/harshavardanan/Nimbus.git
 cd Nimbus
-./scripts/run.sh
+./scripts/run.sh release
 ```
 
-That builds the app, bundles `build/Nimbus.app`, signs it ad hoc and launches it. Drag `build/Nimbus.app` to
-`/Applications` to keep it. Nimbus has no Dock icon; its menu bar icon holds **Settings…** and **Quit**.
+That builds `build/Nimbus.app`, signs it on your Mac and launches it (about a minute). `./scripts/package.sh`
+makes the zip that is published on the Releases page.
 
 macOS asks for permission the first time a feature needs it:
 
@@ -102,8 +123,8 @@ to it. Full guide, safety notes and an iCloud-based fallback: **[docs/iphone-syn
 
 ## Known limitations
 
-- **Not notarized**, so there's no download yet; build from source.
-- No launch at login, no widget reordering and no global shortcut yet.
+- **Not notarized**, so macOS asks you to allow it once (see Install). Apple silicon only for now.
+- No widget reordering and no global shortcut yet. (Open at login is in Settings.)
 - iPhone and iPad connect through Shortcuts: it needs the same Wi-Fi, can't read charging state, and a phone
   timer only shows if you start it with the **Nimbus Timer** shortcut (iOS doesn't let apps read Clock timers).
 - Do Not Disturb has no public switch on macOS, so the Focus toggle runs a Shortcut that you create.

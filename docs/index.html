@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nimbus: a dynamic island for your MacBook notch</title>
+<meta name="description" content="Nimbus is a free, open-source dynamic island for the MacBook notch. Now playing, Pomodoro, calendar, battery levels (iPhone too), weather and more.">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="Nimbus: a dynamic island for your MacBook notch">
+<meta property="og:description" content="Free and open source. Now playing, Pomodoro, calendar, batteries, weather and more, right at the notch.">
+<meta property="og:image" content="https://harshavardanan.github.io/Nimbus/hero.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23111114'/%3E%3Cpath d='M7 6h18v10a6 6 0 0 1-6 6h-6a6 6 0 0 1-6-6z' fill='%23ff7a59'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0a0a0d;
+    --surface: #131318;
+    --surface-2: #1b1b22;
+    --line: #26262f;
+    --text: #f4f4f6;
+    --muted: #a3a3b0;
+    --accent: #ff7a59;
+    --accent-ink: #1a0b06;
+    --radius: 18px;
+    --max: 1080px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.6 var(--font); -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  img { max-width: 100%; height: auto; display: block; }
+  .wrap { width: min(var(--max), 100% - 40px); margin-inline: auto; }
+  .skip { position: absolute; left: -999px; }
+  .skip:focus { left: 16px; top: 16px; background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 10px; z-index: 10; }
+
+  /* top bar */
+  header.bar { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--bg) 82%, transparent); border-bottom: 1px solid var(--line); }
+  .bar .wrap { display: flex; align-items: center; justify-content: space-between; height: 58px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; text-decoration: none; letter-spacing: -0.01em; }
+  .brand svg { width: 22px; height: 22px; }
+  nav { display: flex; align-items: center; gap: 22px; font-size: 15px; color: var(--muted); }
+  nav a { text-decoration: none; }
+  nav a:hover { color: var(--text); }
+
+  /* buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; font: 600 16px var(--font); text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { background: #ff8f73; }
+  .btn.ghost { background: var(--surface); border-color: var(--line); color: var(--text); }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .btn.small { min-height: 38px; padding: 0 16px; font-size: 14px; }
+
+  /* hero */
+  .hero { padding: 72px 0 40px; text-align: center; }
+  .eyebrow { display: inline-block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 18px; }
+  h1 { font-size: clamp(38px, 6.4vw, 68px); line-height: 1.04; letter-spacing: -0.035em; margin: 0 auto 20px; max-width: 14ch; font-weight: 700; }
+  .lede { font-size: clamp(18px, 2.2vw, 21px); color: var(--muted); max-width: 40em; margin: 0 auto 32px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+  .fine { margin-top: 16px; font-size: 14px; color: var(--muted); }
+
+  /* the island mock: a screen top with the real screenshot hanging from it */
+  .stage { margin: 56px auto 0; width: min(760px, 100%); }
+  .screen { background: linear-gradient(160deg, #2a3a5c 0%, #5b3a6e 55%, #b4577a 100%); border-radius: 18px 18px 0 0; padding: 0 0 34px; position: relative; overflow: hidden; box-shadow: 0 40px 80px -30px rgba(255, 122, 89, .25); }
+  .menubar { height: 26px; background: rgba(0,0,0,.28); }
+  .screen img { width: min(430px, 82%); margin: 0 auto; border-radius: 0 0 28px 28px; box-shadow: 0 18px 40px -8px rgba(0,0,0,.6); }
+  .caption { font-size: 14px; color: var(--muted); margin-top: 14px; }
+
+  /* sections */
+  section { padding: 76px 0; }
+  .section-head { max-width: 40em; margin-bottom: 40px; }
+  h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.12; letter-spacing: -0.025em; margin: 0 0 14px; font-weight: 700; }
+  .section-head p { color: var(--muted); margin: 0; font-size: 18px; }
+  .center { text-align: center; margin-inline: auto; }
+  h3 { font-size: 18px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  p { margin: 0 0 12px; }
+
+  .showcase { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(14px, 3vw, 28px); }
+  .showcase img { border-radius: 14px; margin-inline: auto; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 28px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+  .card p { color: var(--muted); font-size: 15.5px; margin: 0; }
+  .icon { width: 38px; height: 38px; border-radius: 11px; background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); display: grid; place-items: center; margin-bottom: 14px; color: var(--accent); }
+  .icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* install steps */
+  .steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 14px; max-width: 760px; }
+  .steps li { counter-increment: step; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px 20px 72px; position: relative; }
+  .steps li::before { content: counter(step); position: absolute; left: 20px; top: 20px; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 700; }
+  .steps strong { display: block; margin-bottom: 2px; }
+  .steps span { color: var(--muted); font-size: 15.5px; }
+  .note { margin-top: 22px; padding: 16px 20px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); font-size: 15.5px; max-width: 760px; }
+  .note b { color: var(--text); }
+  code { font: 14px/1.4 ui-monospace, "SF Mono", Menlo, monospace; background: #0d0d11; border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; }
+  pre { margin: 12px 0 0; background: #0d0d11; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; overflow-x: auto; font: 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .list { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .list li { padding-left: 28px; position: relative; color: var(--muted); }
+  .list li b { color: var(--text); font-weight: 600; }
+  .list li::before { content: ""; position: absolute; left: 4px; top: 11px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 20px; }
+  details + details { margin-top: 10px; }
+  summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--accent); font-size: 22px; line-height: 1; }
+  details[open] summary::after { content: "–"; }
+  details p { color: var(--muted); padding-bottom: 6px; }
+
+  .final { text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: 56px 24px; }
+  footer { border-top: 1px solid var(--line); padding: 34px 0 48px; color: var(--muted); font-size: 14.5px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; }
+  footer a { text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 640px) {
+    nav a:not(.btn) { display: none; }
+    section { padding: 56px 0; }
+    .hero { padding-top: 48px; }
+    .steps li { padding: 18px 18px 18px 64px; }
+    .steps li::before { left: 16px; top: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Nimbus home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#16161b"/><path d="M7 6h18v10a6 6 0 0 1-6 6h-6a6 6 0 0 1-6-6z" fill="#ff7a59"/></svg>
+      Nimbus
+    </a>
+    <nav aria-label="Main">
+      <a href="#features">What it does</a>
+      <a href="#install">Install</a>
+      <a href="#iphone">iPhone</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn primary small" href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="hero" id="top">
+    <div class="wrap">
+      <span class="eyebrow">Free · Open source · For MacBooks with a notch</span>
+      <h1>Your notch, finally useful.</h1>
+      <p class="lede">Nimbus turns the notch into a small, smart island. See what's playing, run a Pomodoro, check your next meeting and every battery you own, all by moving your mouse to the top of the screen.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>
+          Download for Mac
+        </a>
+        <a class="btn ghost" href="https://github.com/harshavardanan/Nimbus">View on GitHub</a>
+      </div>
+      <p class="fine">Version 0.1 · macOS 14 or later · Apple silicon (M1 and newer) · about 1 MB</p>
+
+      <div class="stage">
+        <div class="screen">
+          <div class="menubar" aria-hidden="true"></div>
+          <img src="hero.png" alt="Nimbus open on the notch, showing the song that's playing with play, skip and a progress bar" width="860" height="336">
+        </div>
+        <p class="caption">The real thing, hanging from the notch.</p>
+      </div>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Eleven widgets. One tiny space.</h2>
+        <p>Hover the notch to open it. The icons on either side switch widgets, and so does a two-finger swipe.</p>
+      </div>
+      <div class="showcase">
+        <img src="widgets.png" alt="Nimbus widgets: Pomodoro, devices battery, calendar, weather, notifications, quick toggles, file shelf and Ask Claude" width="902" height="724" loading="lazy">
+      </div>
+
+      <div class="cards">
+        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><h3>Now playing</h3><p>Apple Music and Spotify. Album art, controls, and a progress bar you can drag.</p></div>
+        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></div><h3>Pomodoro</h3><p>Focus and break cycles. Drag the time to set it, and it stays in the notch while it runs.</p></div>
+        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 11v2"/></svg></div><h3>All your batteries</h3><p>Your Mac, keyboard, mouse, AirPods, and your iPhone or iPad. Warns you when one runs low.</p></div>
+        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div><h3>Calendar</h3><p>Your next event with a countdown, in the notch for the last 15 minutes before it starts.</p></div>
+        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg></div><h3>Weather</h3><p>Current conditions and the next hours. No account, no key. Only the city name is sent.</p></div>
+        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/></svg></div><h3>Ask Claude</h3><p>Type a question, watch the answer stream in. Uses your own Anthropic key.</p></div>
+        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div><h3>File shelf</h3><p>Drop a file on the notch to park it. Drag it out when you need it.</p></div>
+        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/></svg></div><h3>Clipboard and more</h3><p>The last three things you copied, system stats, keep-awake and mute. Some are off until you want them.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="custom">
+    <div class="wrap two">
+      <div>
+        <h2>Make it yours.</h2>
+        <p style="color: var(--muted); font-size: 18px">Everything about how Nimbus looks and moves is a slider away, and you can share your setup as a file.</p>
+      </div>
+      <ul class="list">
+        <li><b>Four themes</b> and your own colours: solid, gradient, glass or tinted by the album art.</li>
+        <li><b>Size and position</b> of the notch, the compact view and the open island.</li>
+        <li><b>Five open-and-close animations</b> (Classic, Drop, Pop, Elastic, Dissolve), with a Replay button.</li>
+        <li><b>Turn widgets on or off.</b> Off means off: nothing keeps running.</li>
+        <li><b>Respects Reduce Motion</b> in macOS, and opens at login if you want.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Install it in four steps.</h2>
+        <p>No Terminal, no coding. It takes about a minute.</p>
+      </div>
+      <ol class="steps">
+        <li><strong>Download and open the zip.</strong><span>Click <a href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download for Mac</a>, then double-click the file in your Downloads folder.</span></li>
+        <li><strong>Drag Nimbus into Applications.</strong><span>Then double-click it. macOS will say it can't verify the app. Click <b>Done</b>.</span></li>
+        <li><strong>Allow it once.</strong><span>Open <b>Apple menu → System Settings → Privacy &amp; Security</b>, scroll down, and click <b>Open Anyway</b> next to "Nimbus was blocked". Enter your password.</span></li>
+        <li><strong>Open it again and click Open.</strong><span>That's it. Nimbus has no Dock icon: look for its icon at the top right of your menu bar, and move your mouse over the notch.</span></li>
+      </ol>
+      <div class="note"><b>Why the warning?</b> Apple charges developers $99 a year to register apps, and Nimbus is a free hobby project that hasn't done that yet. The code is open for anyone to read, so you can see exactly what it does. You only click through the warning once.</div>
+      <div class="note"><b>Stuck on step 3?</b> Open the Terminal app, paste this line, press Return, then open Nimbus again.
+        <pre><code>xattr -dr com.apple.quarantine /Applications/Nimbus.app</code></pre></div>
+    </div>
+  </section>
+
+  <section id="iphone">
+    <div class="wrap two">
+      <div>
+        <h2>Your iPhone, in your notch.</h2>
+        <p style="color: var(--muted); font-size: 18px">Apple doesn't let a Mac read an iPhone's battery, so Nimbus uses Shortcuts. Switch it on in Settings, add the shortcuts Nimbus makes for you, and you're connected over your own Wi-Fi. No account, no cloud.</p>
+      </div>
+      <ul class="list">
+        <li><b>See your iPhone and iPad battery</b> next to your Mac's.</li>
+        <li><b>Start a Pomodoro</b> on your Mac from your phone.</li>
+        <li><b>Show a phone timer</b> in the notch, and get a banner when it ends.</li>
+        <li><b>Off until you switch it on.</b> Every request needs a private token, and only a short fixed list of things is allowed.</li>
+      </ul>
+    </div>
+    <div class="wrap" style="margin-top: 20px"><a class="btn ghost" href="https://github.com/harshavardanan/Nimbus/blob/main/docs/iphone-sync.md">Read the iPhone guide</a></div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <div class="section-head"><h2>Private by design.</h2></div>
+      <div class="cards">
+        <div class="card"><h3>No tracking</h3><p>No analytics, no accounts, no servers of ours.</p></div>
+        <div class="card"><h3>Only two network calls</h3><p>Weather sends the city you typed. Ask Claude sends your question when you press Return.</p></div>
+        <div class="card"><h3>Keys in your Keychain</h3><p>Your Anthropic key and the iPhone token are stored in macOS's own secure storage.</p></div>
+        <div class="card"><h3>Clipboard stays private</h3><p>History is kept in memory only and skips anything a password manager marks as secret.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap" style="max-width: 760px">
+      <div class="section-head"><h2>Questions</h2></div>
+      <details><summary>Is it safe?</summary><p>The whole project is open source under the MIT licence, so anyone can read the code on GitHub. Nimbus only asks for the permissions a feature needs, when you first use it.</p></details>
+      <details><summary>Does it work on a Mac without a notch?</summary><p>Yes. It draws a small pill at the top of the screen instead. It looks best on a notched MacBook.</p></details>
+      <details><summary>Does it work on Intel Macs?</summary><p>Not yet. This first version is built for Macs with Apple silicon (M1 and newer).</p></details>
+      <details><summary>Which music apps does it support?</summary><p>Apple Music and Spotify. macOS doesn't let other apps share what they're playing.</p></details>
+      <details><summary>Can it show my iPhone's notifications?</summary><p>No. macOS has no way to read other apps' notifications. Nimbus shows its own alerts: calendar reminders, finished timers and low batteries.</p></details>
+      <details><summary>How do I uninstall it?</summary><p>Click the Nimbus icon in the menu bar and choose Quit, then drag Nimbus out of Applications into the Trash. If you set it to open at login, switch that off in Settings first.</p></details>
+      <details><summary>How do I get updates?</summary><p>Download the newest zip from the same link and replace the old app. Nimbus can't update itself yet.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="final">
+        <h2>Give your notch a job.</h2>
+        <p style="color: var(--muted); margin-bottom: 26px">Free, open source, and about 1 MB.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download for Mac</a>
+          <a class="btn ghost" href="https://github.com/harshavardanan/Nimbus">Star it on GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Nimbus is free software under the MIT licence.</span>
+    <span><a href="https://github.com/harshavardanan/Nimbus">GitHub</a> · <a href="https://github.com/harshavardanan/Nimbus/issues">Report a problem</a> · <a href="https://github.com/harshavardanan/Nimbus/blob/main/CONTRIBUTING.md">Contribute</a></span>
+  </div>
+</footer>
+</body>
+</html>

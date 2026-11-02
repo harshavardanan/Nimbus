@@ -1,0 +1,33 @@
+HOW TO OPEN NIMBUS
+==================
+
+1. Drag "Nimbus" into your Applications folder.
+
+2. Double-click Nimbus.
+   macOS will say it can't be opened, or can't check it for malware.
+   That's expected: Nimbus is a free app that isn't registered with Apple yet.
+   Click "Done" (don't click "Move to Trash").
+
+3. Open  Apple menu  >  System Settings  >  Privacy & Security.
+   Scroll down to the Security section. You'll see a message that Nimbus
+   was blocked. Click "Open Anyway" and enter your Mac password.
+
+4. Double-click Nimbus again and click "Open".
+
+You only need to do this once.
+
+
+WHERE IS IT?
+Nimbus has no Dock icon. Look for its small icon at the top right of your
+menu bar. Move your mouse over the notch to open it.
+Click the gear inside it to change how it looks.
+
+It needs a Mac with Apple silicon (M1 or later) and macOS 14 or newer.
+
+
+STUCK?
+Open the Terminal app, paste this line, press Return, then open Nimbus again:
+
+  xattr -dr com.apple.quarantine /Applications/Nimbus.app
+
+More help: https://github.com/harshavardanan/Nimbus

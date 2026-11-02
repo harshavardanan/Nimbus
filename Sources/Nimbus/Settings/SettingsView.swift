@@ -60,6 +60,7 @@ struct SettingsView: View {
 
     private var widgetsTab: some View {
         Form {
+            GeneralSettingsSection()
             Section("Show in the island") {
                 ForEach(state.registry.widgets, id: \.id) { widget in
                     Toggle(isOn: Binding(

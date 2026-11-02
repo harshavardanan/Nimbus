@@ -1,5 +1,7 @@
 .build/
+.build-*/
 build/
+dist/
 .swiftpm/
 .DS_Store
 Shortcuts/*unsigned*
