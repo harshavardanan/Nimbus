@@ -5,3 +5,6 @@ dist/
 .swiftpm/
 .DS_Store
 Shortcuts/*unsigned*
+.agents/
+.claude/
+skills-lock.json

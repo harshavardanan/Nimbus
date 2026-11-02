@@ -2,297 +2,710 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nimbus: a dynamic island for your MacBook notch</title>
-<meta name="description" content="Nimbus is a free, open-source dynamic island for the MacBook notch. Now playing, Pomodoro, calendar, battery levels (iPhone too), weather and more.">
+<meta name="description" content="Nimbus is a free, open-source dynamic island for the MacBook notch. Now playing, Pomodoro, calendar, every battery you own, weather and more.">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
 <meta name="author" content="Harshavardanan">
 <meta property="og:title" content="Nimbus: a dynamic island for your MacBook notch">
 <meta property="og:description" content="Free and open source. Now playing, Pomodoro, calendar, batteries, weather and more, right at the notch.">
 <meta property="og:image" content="https://harshavardanan.github.io/Nimbus/hero.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23111114'/%3E%3Cpath d='M7 6h18v10a6 6 0 0 1-6 6h-6a6 6 0 0 1-6-6z' fill='%23ff7a59'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root {
-    --bg: #0a0a0d;
-    --surface: #131318;
-    --surface-2: #1b1b22;
-    --line: #26262f;
-    --text: #f4f4f6;
-    --muted: #a3a3b0;
+    --bg: #000;
+    --card: #151517;
+    --card-hi: #1d1d20;
+    --text: #f5f5f7;
+    --muted: #a1a1a6;
+    --faint: rgba(255, 255, 255, .1);
     --accent: #ff7a59;
     --accent-ink: #1a0b06;
-    --radius: 18px;
-    --max: 1080px;
-    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+    --spring: cubic-bezier(.34, 1.4, .64, 1);   /* a gentle overshoot, used only on press release */
+    --smooth: cubic-bezier(.2, .8, .2, 1);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+    --pad: clamp(1.25rem, 5vw, 2.5rem);
   }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font: 17px/1.6 var(--font); -webkit-font-smoothing: antialiased;
+    font: 1.0625rem/1.5 var(--font); font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
   }
+  img { max-width: 100%; display: block; }
   a { color: inherit; }
-  img { max-width: 100%; height: auto; display: block; }
-  .wrap { width: min(var(--max), 100% - 40px); margin-inline: auto; }
-  .skip { position: absolute; left: -999px; }
-  .skip:focus { left: 16px; top: 16px; background: var(--accent); color: var(--accent-ink); padding: 8px 14px; border-radius: 10px; z-index: 10; }
+  button { font: inherit; color: inherit; }
+  .wrap { width: min(70rem, 100% - 2 * var(--pad)); margin-inline: auto; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  .skip { position: absolute; left: -999px; top: 0; }
+  .skip:focus { left: 1rem; top: 1rem; background: var(--accent); color: var(--accent-ink); padding: .5rem 1rem; border-radius: .75rem; z-index: 50; }
 
-  /* top bar */
-  header.bar { position: sticky; top: 0; z-index: 5; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--bg) 82%, transparent); border-bottom: 1px solid var(--line); }
-  .bar .wrap { display: flex; align-items: center; justify-content: space-between; height: 58px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; text-decoration: none; letter-spacing: -0.01em; }
-  .brand svg { width: 22px; height: 22px; }
-  nav { display: flex; align-items: center; gap: 22px; font-size: 15px; color: var(--muted); }
-  nav a { text-decoration: none; }
-  nav a:hover { color: var(--text); }
+  /* Large type tightens as it grows; small type loosens a touch. */
+  h1, h2, h3 { margin: 0; font-weight: 700; text-wrap: balance; }
+  h1 { font-size: clamp(2.8rem, 8vw, 5.75rem); line-height: 1.02; letter-spacing: -.045em; }
+  h2 { font-size: clamp(2.1rem, 5.6vw, 3.9rem); line-height: 1.06; letter-spacing: -.035em; }
+  h3 { font-size: 1.375rem; line-height: 1.2; letter-spacing: -.018em; }
+  p { margin: 0; }
+  .lede { font-size: clamp(1.15rem, 2.4vw, 1.5rem); line-height: 1.38; letter-spacing: -.012em; color: var(--muted); text-wrap: pretty; }
+  .small { font-size: .875rem; letter-spacing: .008em; color: var(--muted); }
+  .eyebrow { font-size: .8125rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; color: var(--accent); }
 
-  /* buttons */
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 22px; border-radius: 999px; font: 600 16px var(--font); text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: transform .15s ease, background .15s ease; }
-  .btn:hover { transform: translateY(-1px); }
-  .btn:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-  .btn.primary { background: var(--accent); color: var(--accent-ink); }
-  .btn.primary:hover { background: #ff8f73; }
-  .btn.ghost { background: var(--surface); border-color: var(--line); color: var(--text); }
-  .btn.ghost:hover { background: var(--surface-2); }
-  .btn.small { min-height: 38px; padding: 0 16px; font-size: 14px; }
-
-  /* hero */
-  .hero { padding: 72px 0 40px; text-align: center; }
-  .eyebrow { display: inline-block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 18px; }
-  h1 { font-size: clamp(38px, 6.4vw, 68px); line-height: 1.04; letter-spacing: -0.035em; margin: 0 auto 20px; max-width: 14ch; font-weight: 700; }
-  .lede { font-size: clamp(18px, 2.2vw, 21px); color: var(--muted); max-width: 40em; margin: 0 auto 32px; }
-  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-  .fine { margin-top: 16px; font-size: 14px; color: var(--muted); }
-
-  /* the island mock: a screen top with the real screenshot hanging from it */
-  .stage { margin: 56px auto 0; width: min(760px, 100%); }
-  .screen { background: linear-gradient(160deg, #2a3a5c 0%, #5b3a6e 55%, #b4577a 100%); border-radius: 18px 18px 0 0; padding: 0 0 34px; position: relative; overflow: hidden; box-shadow: 0 40px 80px -30px rgba(255, 122, 89, .25); }
-  .menubar { height: 26px; background: rgba(0,0,0,.28); }
-  .screen img { width: min(430px, 82%); margin: 0 auto; border-radius: 0 0 28px 28px; box-shadow: 0 18px 40px -8px rgba(0,0,0,.6); }
-  .caption { font-size: 14px; color: var(--muted); margin-top: 14px; }
-
-  /* sections */
-  section { padding: 76px 0; }
-  .section-head { max-width: 40em; margin-bottom: 40px; }
-  h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.12; letter-spacing: -0.025em; margin: 0 0 14px; font-weight: 700; }
-  .section-head p { color: var(--muted); margin: 0; font-size: 18px; }
-  .center { text-align: center; margin-inline: auto; }
-  h3 { font-size: 18px; margin: 0 0 6px; letter-spacing: -0.01em; }
-  p { margin: 0 0 12px; }
-
-  .showcase { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: clamp(14px, 3vw, 28px); }
-  .showcase img { border-radius: 14px; margin-inline: auto; }
-
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 28px; }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
-  .card p { color: var(--muted); font-size: 15.5px; margin: 0; }
-  .icon { width: 38px; height: 38px; border-radius: 11px; background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); display: grid; place-items: center; margin-bottom: 14px; color: var(--accent); }
-  .icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
-  /* install steps */
-  .steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 14px; max-width: 760px; }
-  .steps li { counter-increment: step; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px 20px 72px; position: relative; }
-  .steps li::before { content: counter(step); position: absolute; left: 20px; top: 20px; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 700; }
-  .steps strong { display: block; margin-bottom: 2px; }
-  .steps span { color: var(--muted); font-size: 15.5px; }
-  .note { margin-top: 22px; padding: 16px 20px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); font-size: 15.5px; max-width: 760px; }
-  .note b { color: var(--text); }
-  code { font: 14px/1.4 ui-monospace, "SF Mono", Menlo, monospace; background: #0d0d11; border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; }
-  pre { margin: 12px 0 0; background: #0d0d11; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; overflow-x: auto; font: 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
-
-  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-  .list { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
-  .list li { padding-left: 28px; position: relative; color: var(--muted); }
-  .list li b { color: var(--text); font-weight: 600; }
-  .list li::before { content: ""; position: absolute; left: 4px; top: 11px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-
-  details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 20px; }
-  details + details { margin-top: 10px; }
-  summary { cursor: pointer; padding: 14px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
-  summary::-webkit-details-marker { display: none; }
-  summary::after { content: "+"; color: var(--accent); font-size: 22px; line-height: 1; }
-  details[open] summary::after { content: "–"; }
-  details p { color: var(--muted); padding-bottom: 6px; }
-
-  .final { text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: 56px 24px; }
-  footer { border-top: 1px solid var(--line); padding: 34px 0 48px; color: var(--muted); font-size: 14.5px; }
-  footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; }
-  footer a { text-decoration: none; }
-  footer a:hover { color: var(--text); }
-
-  @media (max-width: 640px) {
-    nav a:not(.btn) { display: none; }
-    section { padding: 56px 0; }
-    .hero { padding-top: 48px; }
-    .steps li { padding: 18px 18px 18px 64px; }
-    .steps li::before { left: 16px; top: 18px; }
+  /* Translucent top bar: content scrolls underneath, and it fades out instead of ending in a hard line. */
+  header.bar {
+    position: fixed; inset: 0 0 auto 0; z-index: 30; height: 3.25rem;
+    background: rgba(0, 0, 0, .55); -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px);
+    border-top: 1px solid rgba(255, 255, 255, .06);
   }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn { transition: none; } }
+  header.bar::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 1.5rem; pointer-events: none;
+    background: linear-gradient(rgba(0, 0, 0, .35), transparent); }
+  .bar .wrap { height: 100%; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; font-weight: 650; letter-spacing: -.01em; }
+  .brand img { width: 1.6rem; height: 1.6rem; border-radius: .4rem; }
+  nav { display: flex; align-items: center; gap: 1.6rem; font-size: .875rem; }
+  nav a:not(.btn) { color: #d2d2d7; text-decoration: none; transition: color .2s; }
+  nav a:not(.btn):hover { color: #fff; }
+
+  /* Buttons respond on press, instantly, and release with a little spring. */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+    min-height: 3rem; padding: 0 1.5rem; border-radius: 999px; border: 0; cursor: pointer;
+    font-weight: 600; font-size: 1.0625rem; letter-spacing: -.006em; text-decoration: none;
+    transition: transform .4s var(--spring), background-color .2s, opacity .2s;
+  }
+  .btn:hover { transform: scale(1.03); }
+  .btn:active { transform: scale(.96); transition-duration: .08s; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { background: #ff8c70; }
+  .btn.quiet { background: rgba(255, 255, 255, .12); color: var(--text); }
+  .btn.quiet:hover { background: rgba(255, 255, 255, .18); }
+  .btn.sm { min-height: 2.15rem; padding: 0 1rem; font-size: .875rem; }
+
+  section { padding-block: clamp(4.5rem, 11vw, 9rem); }
+  .center { text-align: center; }
+  .center .lede { max-width: 38rem; margin-inline: auto; }
+
+  /* ───────── hero ───────── */
+  .hero { padding-top: calc(3.25rem + clamp(2rem, 5vw, 4rem)); padding-bottom: 0; text-align: center; overflow: clip; }
+  .hero h1 { max-width: 12ch; margin: .8rem auto 1.1rem; }
+  .hero .lede { max-width: 36rem; margin-inline: auto; font-size: clamp(1.1rem, 2vw, 1.35rem); }
+  .cta { display: flex; flex-wrap: wrap; gap: .8rem; justify-content: center; margin-top: 1.6rem; }
+  .hero .small { margin-top: 1.1rem; }
+
+  .stage { margin-top: clamp(1.8rem, 5vw, 3rem); position: relative; }
+  .mac {
+    position: relative; width: min(62rem, 100%); margin: 0 auto; height: clamp(15rem, 40vw, 25rem);
+    border-radius: 1.4rem 1.4rem 0 0; overflow: hidden;
+    background:
+      radial-gradient(120% 90% at 85% 110%, #c9506c 0%, transparent 55%),
+      radial-gradient(90% 80% at 10% 100%, #3b3f8f 0%, transparent 60%),
+      linear-gradient(180deg, #1a1f3d 0%, #2c2552 100%);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 -2rem 6rem -2rem rgba(255, 122, 89, .25);
+    -webkit-mask-image: linear-gradient(#000 78%, transparent 100%); mask-image: linear-gradient(#000 78%, transparent 100%);
+  }
+  .menubar { position: absolute; inset: 0 0 auto 0; height: 1.65rem; background: rgba(0, 0, 0, .3); font-size: .72rem; color: rgba(255, 255, 255, .85);
+    display: flex; align-items: center; justify-content: space-between; padding-inline: 1rem; }
+  .menubar > span:first-child { display: flex; gap: 1.1rem; }
+  .menubar b { font-weight: 600; }
+  .menubar .fade { opacity: .75; }
+
+  /* The island. Its size is driven by a spring in JS; CSS only draws it. */
+  .island-wrap { position: absolute; top: 0; left: 50%; width: 30rem; height: 13rem; margin-left: -15rem; transform-origin: top center; }
+  .hit { position: absolute; top: 0; left: 50%; width: 232px; height: 52px; transform: translateX(-50%); }   /* a forgiving zone around the island, resized by JS */
+  .island {
+    --fg: #fff; --sub: rgba(255, 255, 255, .62); --chip: rgba(255, 255, 255, .11); --track: rgba(255, 255, 255, .22);
+    position: absolute; top: 0; left: 50%; width: 196px; height: 32px; transform: translateX(-50%); transform-origin: top center; text-align: left;
+    background: #000; color: var(--fg); border-radius: 0 0 10px 10px; overflow: hidden;
+    will-change: width, height, transform; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+    transition: background-color .4s, color .4s, box-shadow .4s;
+  }
+  .island.open { box-shadow: 0 0 0 1px rgba(255, 255, 255, .07), 0 2rem 3.5rem -1rem rgba(0, 0, 0, .55); }
+  .island[data-theme="glass"] { background: rgba(28, 31, 42, .55); -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%); }
+  .island[data-theme="aurora"] { background: linear-gradient(170deg, #000 0%, #2a1520 100%); }
+  .island[data-theme="paper"] { background: #f3efe8; --fg: #1a1a1c; --sub: rgba(26, 26, 28, .6); --chip: rgba(26, 26, 28, .09); --track: rgba(26, 26, 28, .18); }
+
+  .notch-btn { position: absolute; inset: 0; background: none; border: 0; cursor: pointer; z-index: 5; }
+  .island.open .notch-btn { display: none; }
+  .content { position: absolute; top: 0; left: 50%; width: 440px; height: 168px; margin-left: -220px; opacity: 0; will-change: opacity, filter; }
+  .rail { position: absolute; top: 4px; left: 0; right: 0; height: 24px; display: flex; justify-content: space-between; padding-inline: 14px; }
+  .rail > div { display: flex; }
+  .tab { width: 28px; height: 24px; border: 0; background: none; border-radius: 12px; display: grid; place-items: center; cursor: pointer; color: var(--sub); transition: background-color .25s, color .25s, transform .3s var(--spring); }
+  .tab:hover { color: var(--fg); }
+  .tab:active { transform: scale(.88); transition-duration: .06s; }
+  .tab[aria-selected="true"] { background: var(--chip); color: var(--fg); }
+  .tab svg, .gear svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .gear { width: 28px; height: 24px; display: grid; place-items: center; color: var(--sub); }
+
+  .panel { position: absolute; left: 20px; right: 20px; top: 38px; bottom: 14px; opacity: 0; transform: translateY(6px) scale(.97); transform-origin: top center; pointer-events: none;
+    transition: opacity .28s var(--smooth), transform .35s var(--smooth); }
+  .panel.on { opacity: 1; transform: none; pointer-events: auto; }
+  .play { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+  .row { display: flex; gap: 14px; align-items: center; }
+  .art { width: 58px; height: 58px; border-radius: 12px; flex: none; background: linear-gradient(135deg, #ff7a59, #ffb347 55%, #ffe29a); box-shadow: 0 6px 18px -6px rgba(255, 122, 89, .6); }
+  .meta { flex: 1; min-width: 0; }
+  .meta b { display: block; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .meta > span { font-size: 12px; color: var(--sub); }
+  .scrub { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--sub); }
+  .bar-track { position: relative; flex: 1; height: 16px; cursor: ew-resize; touch-action: none; display: grid; align-items: center; }
+  .bar-track i { display: block; height: 3px; border-radius: 3px; background: var(--track); position: relative; transition: height .2s; }
+  .bar-track i b { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--accent); width: 0; display: block; }
+  .bar-track i u { position: absolute; top: 50%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: var(--fg); box-shadow: 0 1px 4px rgba(0, 0, 0, .35); transform: scale(0); transition: transform .3s var(--spring); left: 0; }
+  .bar-track.drag i { height: 6px; }
+  .bar-track.drag i u { transform: scale(1); }
+  .ctrls { display: flex; justify-content: center; align-items: center; gap: 14px; }
+  .circ { border: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer; background: var(--chip); color: var(--fg); width: 34px; height: 34px; transition: transform .35s var(--spring), background-color .2s; }
+  .circ:active { transform: scale(.86); transition-duration: .06s; }
+  .circ.big { width: 40px; height: 40px; background: var(--fg); color: #000; }
+  .island[data-theme="paper"] .circ.big { background: #1a1a1c; color: #fff; }
+  .circ svg { width: 14px; height: 14px; fill: currentColor; }
+  .circ.big svg { width: 16px; height: 16px; }
+
+  .pomo { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+  .pomo .top { display: flex; justify-content: space-between; align-items: center; }
+  .pomo .lab { font-size: 11px; font-weight: 600; letter-spacing: .08em; color: #ff6b61; display: flex; gap: 8px; align-items: center; }
+  .dots { display: inline-flex; gap: 4px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; border: 1.2px solid #ff6b61; }
+  .dots i.f { background: #ff6b61; }
+  .time { font-size: 40px; font-weight: 600; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .pomo .btns { display: flex; gap: 8px; }
+  .pomo .circ.big { background: #ff6b61; color: #000; }
+  .chips { display: flex; gap: 6px; align-items: center; }
+  .chips .meter { flex: 1; height: 4px; border-radius: 4px; background: var(--track); overflow: hidden; margin-right: 8px; }
+  .chips .meter b { display: block; height: 100%; width: 3%; background: #ff6b61; }
+  .chip { border: 0; font-size: 11px; padding: 5px 10px; border-radius: 999px; background: var(--chip); color: var(--fg); cursor: pointer; transition: transform .3s var(--spring), background-color .2s; }
+  .chip:active { transform: scale(.9); transition-duration: .06s; }
+  .chip.sel { background: #ff6b61; color: #000; font-weight: 600; }
+
+  .head { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--sub); margin-bottom: 8px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 2px; }
+  .tile { background: var(--chip); border-radius: 12px; padding: 6px 9px 7px; }
+  .tile small { display: block; font-size: 10px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile i { display: block; height: 3px; border-radius: 3px; background: var(--track); margin-top: 3px; overflow: hidden; }
+  .tile i u { display: block; height: 100%; width: 0; border-radius: 3px; transition: width .9s var(--smooth) .15s; }
+  .island.open .panel.on .tile i u { width: var(--w); }
+  .event { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .event .bar-c { width: 4px; height: 44px; border-radius: 2px; background: #7f8cff; }
+  .event b { display: block; font-size: 15px; font-weight: 600; }
+  .event > div > span { font-size: 12px; color: var(--sub); }
+  .event .pill { margin-left: auto; background: #7f8cff; color: #000; font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; }
+  .then { font-size: 11px; color: var(--sub); margin: 10px 0 0 16px; }
+
+  /* demo controls */
+  .controls { width: min(62rem, 100%); margin: 1.6rem auto 0; display: flex; flex-wrap: wrap; gap: 1rem 2rem; justify-content: center; align-items: center; }
+  .seg { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+  .seg > span { font-size: .8125rem; color: var(--muted); }
+  .seg > div { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, .09); }
+  .seg button { border: 0; background: none; padding: .38rem .85rem; border-radius: 999px; font-size: .8125rem; cursor: pointer; color: #d2d2d7; transition: background-color .25s, color .25s, transform .3s var(--spring); }
+  .seg button:active { transform: scale(.94); transition-duration: .06s; }
+  .seg button[aria-pressed="true"] { background: #fff; color: #000; font-weight: 600; }
+  .hint { margin-top: 1.4rem; text-align: center; }
+
+  /* ───────── widgets rail ───────── */
+  .intro { margin-bottom: clamp(2rem, 5vw, 3.5rem); }
+  .rail-scroll { display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 var(--pad) 1.5rem; scroll-padding-inline: var(--pad);
+    -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .rail-scroll::-webkit-scrollbar { display: none; }
+  .slide { flex: 0 0 min(34rem, 86vw); scroll-snap-align: start; background: var(--card); border-radius: 1.75rem; overflow: hidden; display: flex; flex-direction: column; }
+  .slide .shot { padding: 2.2rem 1.6rem 0; background: radial-gradient(90% 100% at 50% 0%, #26262b, #151517 70%); height: 15rem; display: flex; justify-content: center; }
+  .slide .shot img { width: 100%; max-width: 27rem; height: auto; align-self: flex-start; filter: drop-shadow(0 1.2rem 2rem rgba(0, 0, 0, .6)); }
+  .slide .txt { padding: 1.5rem 1.7rem 1.9rem; display: grid; gap: .4rem; }
+  .slide p { color: var(--muted); font-size: 1rem; line-height: 1.45; }
+  .more { text-align: center; margin-top: 1rem; }
+
+  /* ───────── make it yours ───────── */
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin-top: clamp(2rem, 5vw, 3.5rem); }
+  .tile-card { background: var(--card); border-radius: 1.5rem; padding: 1.8rem; display: grid; gap: .6rem; align-content: start; }
+  .tile-card p { color: var(--muted); font-size: 1rem; line-height: 1.45; }
+  .tile-card .big { font-size: 2.6rem; font-weight: 700; letter-spacing: -.04em; line-height: 1; color: var(--accent); }
+  .tile-card.wide { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1.4rem 2.5rem; align-items: start; }
+
+  /* ───────── iPhone ───────── */
+  .phone { background: var(--card-hi); border-radius: clamp(1.5rem, 4vw, 3rem); margin-inline: clamp(.5rem, 2vw, 1.5rem); }
+  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; margin-top: clamp(2rem, 5vw, 3.5rem); text-align: left; }
+  .flow .tile-card { background: var(--card); }
+  .flow svg { width: 2.4rem; height: 2.4rem; fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; margin-bottom: .4rem; }
+  .links { display: flex; justify-content: center; margin-top: 2rem; }
+
+  /* ───────── install ───────── */
+  .steps { list-style: none; counter-reset: s; padding: 0; margin: clamp(2rem, 5vw, 3.5rem) 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+  .steps li { counter-increment: s; background: var(--card); border-radius: 1.5rem; padding: 1.8rem; display: grid; gap: .5rem; align-content: start; }
+  .steps li::before { content: counter(s); font-size: 3.4rem; font-weight: 700; letter-spacing: -.05em; line-height: 1; color: var(--accent); margin-bottom: .4rem; }
+  .steps p { color: var(--muted); font-size: 1rem; line-height: 1.45; }
+  .steps b, .note b { color: var(--text); font-weight: 600; }
+  .note { margin-top: 1rem; padding: 1.4rem 1.7rem; border-radius: 1.5rem; background: var(--card); color: var(--muted); font-size: 1rem; line-height: 1.5; }
+  code { font: .875rem/1.4 ui-monospace, "SF Mono", Menlo, monospace; background: rgba(255, 255, 255, .08); border-radius: .45rem; padding: .15rem .45rem; user-select: all; }
+
+  /* ───────── FAQ ───────── */
+  .faq { width: min(46rem, 100% - 2 * var(--pad)); margin-inline: auto; margin-top: clamp(2rem, 5vw, 3rem); }
+  details { border-top: 1px solid var(--faint); }
+  details:last-child { border-bottom: 1px solid var(--faint); }
+  summary { cursor: pointer; list-style: none; padding: 1.3rem 0; font-size: 1.125rem; font-weight: 600; letter-spacing: -.012em; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: ""; flex: none; width: .55rem; height: .55rem; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translate(-2px, -2px); transition: transform .35s var(--smooth); }
+  details[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+  details p { color: var(--muted); padding: 0 2rem 1.4rem 0; font-size: 1.0625rem; line-height: 1.5; animation: reveal .4s var(--smooth); }
+  @keyframes reveal { from { opacity: 0; transform: translateY(-4px); } }
+
+  .final { text-align: center; }
+  .final h2 { max-width: 14ch; margin-inline: auto; }
+  .final .cta { margin-top: 2rem; }
+  footer { padding: 2.5rem 0 3rem; color: var(--muted); font-size: .875rem; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: .8rem 2rem; justify-content: space-between; border-top: 1px solid var(--faint); padding-top: 1.6rem; }
+  footer a { text-decoration: none; } footer a:hover { color: var(--text); }
+  footer b { color: var(--text); font-weight: 600; }
+
+  /* Gentle scroll-in, switched off for anyone who asks for less motion. */
+  .js .rise { opacity: 0; transform: translateY(1.2rem); transition: opacity .8s var(--smooth), transform .8s var(--smooth); }
+  .js .rise.in { opacity: 1; transform: none; }
+
+  @media (max-width: 44rem) { nav a:not(.btn) { display: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .js .rise { opacity: 1; transform: none; transition: none; }
+    .btn, .tab, .circ, .chip, .seg button, .panel, details p, .bar-track i u { transition-duration: .01s; animation: none; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    header.bar { background: #000; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .island[data-theme="glass"] { background: #1c1f2a; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+  @media (prefers-contrast: more) {
+    :root { --muted: #d0d0d6; --card: #1c1c1f; }
+    .island.open { box-shadow: 0 0 0 1px rgba(255, 255, 255, .5); }
+  }
 </style>
 </head>
 <body>
+<script>document.documentElement.classList.add('js')</script>
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="bar">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Nimbus home">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#16161b"/><path d="M7 6h18v10a6 6 0 0 1-6 6h-6a6 6 0 0 1-6-6z" fill="#ff7a59"/></svg>
-      Nimbus
-    </a>
+    <a class="brand" href="#top" aria-label="Nimbus, back to top"><img src="favicon.png" alt="" width="26" height="26">Nimbus</a>
     <nav aria-label="Main">
-      <a href="#features">What it does</a>
-      <a href="#install">Install</a>
+      <a href="#widgets">Widgets</a>
+      <a href="#custom">Customize</a>
       <a href="#iphone">iPhone</a>
+      <a href="#install">Install</a>
       <a href="#faq">FAQ</a>
-      <a class="btn primary small" href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download</a>
+      <a class="btn primary sm" href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download</a>
     </nav>
   </div>
 </header>
 
 <main id="main">
-  <div class="hero" id="top">
+  <!-- hero -->
+  <section class="hero" id="top">
     <div class="wrap">
-      <span class="eyebrow">Free · Open source · For MacBooks with a notch</span>
+      <p class="eyebrow">Free · Open source · for MacBooks with a notch</p>
       <h1>Your notch, finally useful.</h1>
-      <p class="lede">Nimbus turns the notch into a small, smart island. See what's playing, run a Pomodoro, check your next meeting and every battery you own, all by moving your mouse to the top of the screen.</p>
+      <p class="lede">Nimbus turns the notch into a small, smart island. What's playing, your Pomodoro, your next meeting, every battery you own. All a glance away.</p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg>
           Download for Mac
         </a>
-        <a class="btn ghost" href="https://github.com/harshavardanan/Nimbus">View on GitHub</a>
+        <a class="btn quiet" href="https://github.com/harshavardanan/Nimbus">View on GitHub</a>
       </div>
-      <p class="fine">Version 0.1 · macOS 14 or later · Apple silicon (M1 and newer) · about 1 MB</p>
+      <p class="small">Free · Version 0.1 · macOS 14 or later · Apple silicon</p>
+    </div>
 
-      <div class="stage">
-        <div class="screen">
-          <div class="menubar" aria-hidden="true"></div>
-          <img src="hero.png" alt="Nimbus open on the notch, showing the song that's playing with play, skip and a progress bar" width="860" height="336">
+    <div class="stage">
+      <figure class="mac" id="mac">
+        <div class="menubar" aria-hidden="true"><span><b>Finder</b><span class="fade">File</span><span class="fade">Edit</span><span class="fade">View</span></span><span class="fade">Mon 2 Nov &nbsp; 10:14</span></div>
+        <div class="island-wrap" id="wrap">
+          <div class="hit" id="hit">
+            <div class="island" id="island" data-theme="obsidian" role="group" aria-label="Nimbus, a live demo. Hover the notch to open it.">
+              <button class="notch-btn" id="notchBtn" type="button" aria-expanded="false" aria-controls="content"><span class="sr">Open the Nimbus demo</span></button>
+              <div class="content" id="content">
+                <div class="rail">
+                  <div role="tablist" aria-label="Widgets">
+                    <button class="tab" role="tab" id="t-music" aria-selected="true" aria-controls="p-music" aria-label="Now playing"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+                    <button class="tab" role="tab" id="t-pomo" aria-selected="false" aria-controls="p-pomo" aria-label="Pomodoro"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></button>
+                  </div>
+                  <div>
+                    <div role="tablist" aria-label="More widgets" style="display:flex">
+                      <button class="tab" role="tab" id="t-batt" aria-selected="false" aria-controls="p-batt" aria-label="Batteries"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/></svg></button>
+                      <button class="tab" role="tab" id="t-cal" aria-selected="false" aria-controls="p-cal" aria-label="Calendar"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>
+                    </div>
+                    <span class="gear" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></span>
+                  </div>
+                </div>
+
+                <div class="panel on" id="p-music" role="tabpanel" aria-labelledby="t-music">
+                  <div class="play">
+                    <div class="row">
+                      <div class="art" aria-hidden="true"></div>
+                      <div class="meta"><b>Midnight City</b><span>M83</span>
+                        <div class="scrub"><span id="tNow">1:27</span>
+                          <div class="bar-track" id="track" role="slider" tabindex="0" aria-label="Playback position" aria-valuemin="0" aria-valuemax="241" aria-valuenow="87"><i><b id="fill"></b><u id="knob"></u></i></div>
+                          <span>4:01</span></div>
+                      </div>
+                    </div>
+                    <div class="ctrls">
+                      <button class="circ" type="button" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+                      <button class="circ big" type="button" id="playBtn" aria-label="Pause"><svg viewBox="0 0 24 24" id="playIcon"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
+                      <button class="circ" type="button" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="panel" id="p-pomo" role="tabpanel" aria-labelledby="t-pomo">
+                  <div class="pomo">
+                    <div class="top">
+                      <div><div class="lab">FOCUS <span class="dots" role="img" aria-label="2 of 4 sessions done"><i class="f"></i><i class="f"></i><i></i><i></i></span></div><div class="time" id="pTime">24:29</div></div>
+                      <div class="btns">
+                        <button class="circ big" type="button" id="pPlay" aria-label="Pause"><svg viewBox="0 0 24 24" id="pIcon"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
+                        <button class="circ" type="button" id="pReset" aria-label="Reset"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+                      </div>
+                    </div>
+                    <div class="chips"><div class="meter"><b id="pMeter"></b></div>
+                      <button class="chip" type="button" data-min="15">15</button><button class="chip sel" type="button" data-min="25">25</button><button class="chip" type="button" data-min="45">45</button></div>
+                  </div>
+                </div>
+
+                <div class="panel" id="p-batt" role="tabpanel" aria-labelledby="t-batt">
+                  <div class="tiles" role="list" aria-label="Devices">
+                    <div class="tile"><small>This Mac</small><b>91%</b><i><u style="--w:91%; background:#4ade80"></u></i></div>
+                    <div class="tile"><small>iPhone</small><b>78%</b><i><u style="--w:78%; background:#4ade80"></u></i></div>
+                    <div class="tile"><small>AirPods</small><b>47%</b><i><u style="--w:47%; background:#ffd166"></u></i></div>
+                    <div class="tile"><small>Keyboard</small><b>38%</b><i><u style="--w:38%; background:#ffd166"></u></i></div>
+                    <div class="tile"><small>iPad</small><b>64%</b><i><u style="--w:64%; background:#4ade80"></u></i></div>
+                    <div class="tile"><small>Mouse</small><b>15%</b><i><u style="--w:15%; background:#f87171"></u></i></div>
+                  </div>
+                </div>
+
+                <div class="panel" id="p-cal" role="tabpanel" aria-labelledby="t-cal">
+                  <div class="head">Next event</div>
+                  <div class="event"><span class="bar-c"></span><div><b>Design review</b><span>3:30 to 4:00 · Room 4</span></div><span class="pill">in 12 min</span></div>
+                  <div class="then">Then: Lunch with Sam at 5:15</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <p class="caption">The real thing, hanging from the notch.</p>
-      </div>
-    </div>
-  </div>
+      </figure>
+      <noscript><img src="hero.png" alt="Nimbus open on the notch, showing now playing" style="margin: 2rem auto 0; width: min(28rem, 90%)"></noscript>
 
-  <section id="features">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Theme"><span>Theme</span><div>
+          <button type="button" data-theme="obsidian" aria-pressed="true">Obsidian</button>
+          <button type="button" data-theme="glass" aria-pressed="false">Glass</button>
+          <button type="button" data-theme="aurora" aria-pressed="false">Aurora</button>
+          <button type="button" data-theme="paper" aria-pressed="false">Paper</button></div></div>
+        <div class="seg" role="group" aria-label="Open animation"><span>Opens</span><div>
+          <button type="button" data-anim="classic" aria-pressed="true">Classic</button>
+          <button type="button" data-anim="drop" aria-pressed="false">Drop</button>
+          <button type="button" data-anim="pop" aria-pressed="false">Pop</button>
+          <button type="button" data-anim="elastic" aria-pressed="false">Elastic</button>
+          <button type="button" data-anim="dissolve" aria-pressed="false">Dissolve</button></div></div>
+      </div>
+      <p class="small hint" id="hint">This is the real thing, in miniature. Move your mouse over the notch.</p>
+    </div>
+  </section>
+
+  <!-- widgets -->
+  <section id="widgets" style="padding-bottom: clamp(3rem, 7vw, 5rem)">
+    <div class="wrap intro center rise">
+      <p class="eyebrow">Eleven widgets</p>
+      <h2>One tiny space.<br>Everything you glance at.</h2>
+      <p class="lede" style="margin-top: 1.2rem">Switch widgets with the icons beside the notch, or with a two-finger swipe.</p>
+    </div>
+    <div class="rail-scroll" tabindex="0" aria-label="Nimbus widgets, scroll sideways">
+      <article class="slide"><div class="shot"><img src="img/nowplaying.png" alt="Now playing widget with album art and a progress bar" width="860" height="336" loading="lazy"></div><div class="txt"><h3>Now playing</h3><p>Apple Music and Spotify. Album art, controls, and a progress bar you can drag.</p></div></article>
+      <article class="slide"><div class="shot"><img src="img/timer.png" alt="Pomodoro timer showing 24:29 with session dots" width="860" height="336" loading="lazy"></div><div class="txt"><h3>Pomodoro</h3><p>Focus and break cycles. Drag the time to set it, and it stays in the notch while it runs.</p></div></article>
+      <article class="slide"><div class="shot"><img src="img/devices.png" alt="Battery levels for a Mac, keyboard, mouse, AirPods and iPhone" width="860" height="336" loading="lazy"></div><div class="txt"><h3>Every battery you own</h3><p>Your Mac, keyboard, mouse, AirPods and iPhone, in one glance. It warns you before one runs out.</p></div></article>
+      <article class="slide"><div class="shot"><img src="img/calendar.png" alt="Calendar widget showing the next event in 12 minutes" width="860" height="276" loading="lazy"></div><div class="txt"><h3>Calendar</h3><p>Your next meeting, counting down. It slides into the notch just before it starts.</p></div></article>
+      <article class="slide"><div class="shot"><img src="img/weather.png" alt="Weather widget showing 18 degrees and the next hours" width="860" height="336" loading="lazy"></div><div class="txt"><h3>Weather</h3><p>Right now and the next few hours. No account and no key. Only the city you typed is sent.</p></div></article>
+      <article class="slide"><div class="shot"><img src="img/notifications.png" alt="Notifications widget listing recent alerts" width="860" height="300" loading="lazy"></div><div class="txt"><h3>Notifications</h3><p>Nimbus's own alerts slide in, then tuck away after a few seconds.</p></div></article>
+      <article class="slide"><div class="shot"><img src="img/toggles.png" alt="Quick toggles for keeping awake, sound and Focus" width="860" height="260" loading="lazy"></div><div class="txt"><h3>Quick toggles</h3><p>Keep your Mac awake, mute it, or run a Focus Shortcut, in one tap.</p></div></article>
+      <article class="slide"><div class="shot"><img src="img/shelf.png" alt="File shelf holding three files" width="860" height="280" loading="lazy"></div><div class="txt"><h3>File shelf</h3><p>Drop a file on the notch to park it. Drag it out when you need it.</p></div></article>
+      <article class="slide"><div class="shot"><img src="img/claude.png" alt="Ask Claude widget answering a question" width="860" height="336" loading="lazy"></div><div class="txt"><h3>Ask Claude</h3><p>Type a question and the answer streams in. Uses your own Anthropic key.</p></div></article>
+    </div>
+    <p class="small more">Plus clipboard history and system stats, both off until you want them.</p>
+  </section>
+
+  <!-- customize -->
+  <section id="custom" style="padding-top: 0">
     <div class="wrap">
-      <div class="section-head">
-        <h2>Eleven widgets. One tiny space.</h2>
-        <p>Hover the notch to open it. The icons on either side switch widgets, and so does a two-finger swipe.</p>
-      </div>
-      <div class="showcase">
-        <img src="widgets.png" alt="Nimbus widgets: Pomodoro, devices battery, calendar, weather, notifications, quick toggles, file shelf and Ask Claude" width="902" height="724" loading="lazy">
-      </div>
-
-      <div class="cards">
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><h3>Now playing</h3><p>Apple Music and Spotify. Album art, controls, and a progress bar you can drag.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></div><h3>Pomodoro</h3><p>Focus and break cycles. Drag the time to set it, and it stays in the notch while it runs.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 11v2"/></svg></div><h3>All your batteries</h3><p>Your Mac, keyboard, mouse, AirPods, and your iPhone or iPad. Warns you when one runs low.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div><h3>Calendar</h3><p>Your next event with a countdown, in the notch for the last 15 minutes before it starts.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg></div><h3>Weather</h3><p>Current conditions and the next hours. No account, no key. Only the city name is sent.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/></svg></div><h3>Ask Claude</h3><p>Type a question, watch the answer stream in. Uses your own Anthropic key.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div><h3>File shelf</h3><p>Drop a file on the notch to park it. Drag it out when you need it.</p></div>
-        <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/></svg></div><h3>Clipboard and more</h3><p>The last three things you copied, system stats, keep-awake and mute. Some are off until you want them.</p></div>
+      <div class="center rise"><p class="eyebrow">Make it yours</p><h2>Looks and moves<br>the way you like.</h2>
+        <p class="lede" style="margin-top: 1.2rem">Try the themes and animations on the island above. Every one of them is in Settings.</p></div>
+      <div class="grid3">
+        <div class="tile-card rise"><span class="big">4</span><h3>Themes</h3><p>Obsidian, Glass, Aurora and Paper. Or set your own colours, backgrounds and borders.</p></div>
+        <div class="tile-card rise"><span class="big">5</span><h3>Open animations</h3><p>Classic, Drop, Pop, Elastic and Dissolve, with springs you can tune yourself.</p></div>
+        <div class="tile-card rise"><span class="big">∞</span><h3>Size and position</h3><p>The notch, the compact view and the open island all resize with a slider.</p></div>
+        <div class="tile-card wide rise"><div><h3>Built to be quiet.</h3><p style="margin-top:.4rem">Turn any widget off and it stops completely. No polling, no background work. Nimbus follows macOS's Reduce Motion setting and can open when you log in.</p></div>
+          <div><h3>Easy to share.</h3><p style="margin-top:.4rem">Export your whole look as one small file and send it to a friend, or import theirs.</p></div></div>
       </div>
     </div>
   </section>
 
-  <section id="custom">
-    <div class="wrap two">
-      <div>
-        <h2>Make it yours.</h2>
-        <p style="color: var(--muted); font-size: 18px">Everything about how Nimbus looks and moves is a slider away, and you can share your setup as a file.</p>
+  <!-- iPhone -->
+  <section id="iphone" class="phone">
+    <div class="wrap center">
+      <div class="rise"><p class="eyebrow">iPhone and iPad</p><h2>Your phone,<br>in your notch.</h2>
+        <p class="lede" style="margin-top: 1.2rem">Apple doesn't let a Mac read an iPhone's battery. So Nimbus makes Shortcuts that send it, over your own Wi-Fi. No account, no cloud.</p></div>
+      <div class="flow">
+        <div class="tile-card rise"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg><h3>1. Make the shortcuts</h3><p>Switch it on in Settings. Nimbus builds five Shortcuts with your Mac's address already inside.</p></div>
+        <div class="tile-card rise"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/></svg><h3>2. Add them to your phone</h3><p>Through iCloud or AirDrop. Run <b>Nimbus Sync</b> once and your battery appears.</p></div>
+        <div class="tile-card rise"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg><h3>3. Control it from there</h3><p>Start a Pomodoro on your Mac, or show a phone timer in the notch.</p></div>
       </div>
-      <ul class="list">
-        <li><b>Four themes</b> and your own colours: solid, gradient, glass or tinted by the album art.</li>
-        <li><b>Size and position</b> of the notch, the compact view and the open island.</li>
-        <li><b>Five open-and-close animations</b> (Classic, Drop, Pop, Elastic, Dissolve), with a Replay button.</li>
-        <li><b>Turn widgets on or off.</b> Off means off: nothing keeps running.</li>
-        <li><b>Respects Reduce Motion</b> in macOS, and opens at login if you want.</li>
-      </ul>
+      <p class="small" style="margin-top: 1.6rem; max-width: 40rem; margin-inline: auto">Off until you switch it on. Every request needs a private token, only a short fixed list of things is allowed, and it only works on your local network.</p>
+      <div class="links"><a class="btn quiet" href="https://github.com/harshavardanan/Nimbus/blob/main/docs/iphone-sync.md">Read the iPhone guide</a></div>
     </div>
   </section>
 
+  <!-- install -->
   <section id="install">
     <div class="wrap">
-      <div class="section-head">
-        <h2>Install it in four steps.</h2>
-        <p>No Terminal, no coding. It takes about a minute.</p>
-      </div>
+      <div class="center rise"><p class="eyebrow">Get it</p><h2>Installed in a minute.</h2>
+        <p class="lede" style="margin-top: 1.2rem">No Terminal, no coding. Four steps.</p></div>
       <ol class="steps">
-        <li><strong>Download and open the zip.</strong><span>Click <a href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download for Mac</a>, then double-click the file in your Downloads folder.</span></li>
-        <li><strong>Drag Nimbus into Applications.</strong><span>Then double-click it. macOS will say it can't verify the app. Click <b>Done</b>.</span></li>
-        <li><strong>Allow it once.</strong><span>Open <b>Apple menu → System Settings → Privacy &amp; Security</b>, scroll down, and click <b>Open Anyway</b> next to "Nimbus was blocked". Enter your password.</span></li>
-        <li><strong>Open it again and click Open.</strong><span>That's it. Nimbus has no Dock icon: look for its icon at the top right of your menu bar, and move your mouse over the notch.</span></li>
+        <li class="rise"><h3>Download</h3><p>Click <a href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download for Mac</a>, then double-click the file in your Downloads folder.</p></li>
+        <li class="rise"><h3>Move it</h3><p>Drag <b>Nimbus</b> into Applications and double-click it. macOS will say it can't verify the app. Click <b>Done</b>.</p></li>
+        <li class="rise"><h3>Allow it once</h3><p>Open <b>System Settings → Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b> next to "Nimbus was blocked".</p></li>
+        <li class="rise"><h3>Open it</h3><p>Open Nimbus again and click <b>Open</b>. It has no Dock icon: find it in the menu bar and move your mouse over the notch.</p></li>
       </ol>
-      <div class="note"><b>Why the warning?</b> Apple charges developers $99 a year to register apps, and Nimbus is a free hobby project that hasn't done that yet. The code is open for anyone to read, so you can see exactly what it does. You only click through the warning once.</div>
-      <div class="note"><b>Stuck on step 3?</b> Open the Terminal app, paste this line, press Return, then open Nimbus again.
-        <pre><code>xattr -dr com.apple.quarantine /Applications/Nimbus.app</code></pre></div>
+      <div class="note rise"><b>Why the warning?</b> Apple charges developers $99 a year to register apps. Nimbus is free and open source and hasn't done that yet, so macOS asks you to confirm once. Anyone can read the code on GitHub to see exactly what it does.</div>
+      <div class="note rise"><b>Stuck on step 3?</b> Open the Terminal app, paste <code>xattr -dr com.apple.quarantine /Applications/Nimbus.app</code> and press Return, then open Nimbus again.</div>
     </div>
   </section>
 
-  <section id="iphone">
-    <div class="wrap two">
-      <div>
-        <h2>Your iPhone, in your notch.</h2>
-        <p style="color: var(--muted); font-size: 18px">Apple doesn't let a Mac read an iPhone's battery, so Nimbus uses Shortcuts. Switch it on in Settings, add the shortcuts Nimbus makes for you, and you're connected over your own Wi-Fi. No account, no cloud.</p>
-      </div>
-      <ul class="list">
-        <li><b>See your iPhone and iPad battery</b> next to your Mac's.</li>
-        <li><b>Start a Pomodoro</b> on your Mac from your phone.</li>
-        <li><b>Show a phone timer</b> in the notch, and get a banner when it ends.</li>
-        <li><b>Off until you switch it on.</b> Every request needs a private token, and only a short fixed list of things is allowed.</li>
-      </ul>
-    </div>
-    <div class="wrap" style="margin-top: 20px"><a class="btn ghost" href="https://github.com/harshavardanan/Nimbus/blob/main/docs/iphone-sync.md">Read the iPhone guide</a></div>
-  </section>
-
-  <section id="privacy">
-    <div class="wrap">
-      <div class="section-head"><h2>Private by design.</h2></div>
-      <div class="cards">
-        <div class="card"><h3>No tracking</h3><p>No analytics, no accounts, no servers of ours.</p></div>
-        <div class="card"><h3>Only two network calls</h3><p>Weather sends the city you typed. Ask Claude sends your question when you press Return.</p></div>
-        <div class="card"><h3>Keys in your Keychain</h3><p>Your Anthropic key and the iPhone token are stored in macOS's own secure storage.</p></div>
-        <div class="card"><h3>Clipboard stays private</h3><p>History is kept in memory only and skips anything a password manager marks as secret.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="faq">
-    <div class="wrap" style="max-width: 760px">
-      <div class="section-head"><h2>Questions</h2></div>
-      <details><summary>Is it safe?</summary><p>The whole project is open source under the MIT licence, so anyone can read the code on GitHub. Nimbus only asks for the permissions a feature needs, when you first use it.</p></details>
+  <!-- privacy + faq -->
+  <section id="faq" style="padding-top: 0">
+    <div class="wrap center rise"><p class="eyebrow">Good to know</p><h2>Private by design.</h2>
+      <p class="lede" style="margin-top: 1.2rem">No tracking, no accounts, no servers of ours. Weather sends the city you typed, and Ask Claude sends your question when you press Return. Your keys live in the macOS Keychain.</p></div>
+    <div class="faq">
+      <details><summary>Is it safe?</summary><p>The whole project is open source under the MIT licence, so anyone can read the code on GitHub. Nimbus only asks for a permission when you first use a feature that needs it.</p></details>
       <details><summary>Does it work on a Mac without a notch?</summary><p>Yes. It draws a small pill at the top of the screen instead. It looks best on a notched MacBook.</p></details>
       <details><summary>Does it work on Intel Macs?</summary><p>Not yet. This first version is built for Macs with Apple silicon (M1 and newer).</p></details>
       <details><summary>Which music apps does it support?</summary><p>Apple Music and Spotify. macOS doesn't let other apps share what they're playing.</p></details>
       <details><summary>Can it show my iPhone's notifications?</summary><p>No. macOS has no way to read other apps' notifications. Nimbus shows its own alerts: calendar reminders, finished timers and low batteries.</p></details>
-      <details><summary>How do I uninstall it?</summary><p>Click the Nimbus icon in the menu bar and choose Quit, then drag Nimbus out of Applications into the Trash. If you set it to open at login, switch that off in Settings first.</p></details>
-      <details><summary>How do I get updates?</summary><p>Download the newest zip from the same link and replace the old app. Nimbus can't update itself yet.</p></details>
+      <details><summary>How do I update or uninstall it?</summary><p>To update, download the newest zip from the same link and replace the old app. To uninstall, choose Quit from its menu bar icon and drag Nimbus from Applications to the Trash.</p></details>
     </div>
   </section>
 
-  <section>
-    <div class="wrap">
-      <div class="final">
-        <h2>Give your notch a job.</h2>
-        <p style="color: var(--muted); margin-bottom: 26px">Free, open source, and about 1 MB.</p>
-        <div class="cta">
-          <a class="btn primary" href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download for Mac</a>
-          <a class="btn ghost" href="https://github.com/harshavardanan/Nimbus">Star it on GitHub</a>
-        </div>
-      </div>
-    </div>
+  <section class="final">
+    <div class="wrap rise"><h2>Give your notch a job.</h2>
+      <div class="cta"><a class="btn primary" href="https://github.com/harshavardanan/Nimbus/releases/latest/download/Nimbus-AppleSilicon.zip">Download for Mac</a><a class="btn quiet" href="https://github.com/harshavardanan/Nimbus">Star it on GitHub</a></div>
+      <p class="small" style="margin-top: 1rem">Free and open source · about 1 MB</p></div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <span>Developed by <a href="https://github.com/harshavardanan"><b style="color: var(--text); font-weight: 600">Harshavardanan</b></a> · Free software under the MIT licence.</span>
+    <span>Developed by <a href="https://github.com/harshavardanan"><b>Harshavardanan</b></a> · Free software under the MIT licence.</span>
     <span><a href="https://github.com/harshavardanan/Nimbus">GitHub</a> · <a href="https://github.com/harshavardanan/Nimbus/issues">Report a problem</a> · <a href="https://github.com/harshavardanan/Nimbus/blob/main/CONTRIBUTING.md">Contribute</a></span>
   </div>
 </footer>
+
+<script>
+/* The island demo.
+   Size, corner and scale are springs: they start from wherever they are right now and keep their velocity
+   when you interrupt them, so opening and closing quickly never jumps. */
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (s) => document.querySelector(s);
+  const island = $('#island'), wrap = $('#wrap'), hit = $('#hit'), content = $('#content'), btn = $('#notchBtn'), hint = $('#hint'), mac = $('#mac');
+  if (!island) return;
+
+  const IDLE = { w: 196, h: 32, r: 10 }, OPEN = { w: 440, h: 168, r: 28 };
+
+  // Each style is a spring (response in seconds, damping ratio) and which side leads.
+  const STYLES = {
+    classic:  { response: .35, damping: .82, lead: 'w' },            // width first, then height
+    drop:     { response: .40, damping: .78, lead: 'h' },            // height first, then width
+    pop:      { response: .42, damping: .52, lead: null, pop: true },// bounces up from a smaller scale
+    elastic:  { response: .50, damping: .45, lead: null },
+    dissolve: { response: .30, damping: 1,   lead: null, blur: true },
+  };
+  let style = STYLES.classic;
+
+  class Spring {
+    constructor(x) { this.x = x; this.v = 0; this.t = x; }
+    step(dt, response, damping) {
+      const w = 2 * Math.PI / response, k = w * w, c = 2 * damping * w;
+      this.v += (k * (this.t - this.x) - c * this.v) * dt;   // semi-implicit Euler: stable at small steps
+      this.x += this.v * dt;
+    }
+    get still() { return Math.abs(this.t - this.x) < .04 && Math.abs(this.v) < .04; }
+  }
+  const sw = new Spring(IDLE.w), sh = new Spring(IDLE.h), sr = new Spring(IDLE.r), ss = new Spring(1);
+  const settled = () => sw.still && sh.still && sr.still && ss.still;
+
+  let open = false, timers = [], raf = 0, last = 0, dragging = false;
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+  const clearLater = () => { timers.forEach(clearTimeout); timers = []; };
+
+  function setTargets(opening) {
+    clearLater();
+    const to = opening ? OPEN : IDLE;
+    sr.t = to.r;
+    const setW = () => { sw.t = to.w; }, setH = () => { sh.t = to.h; };
+    if (reduce) { sw.x = sw.t = to.w; sh.x = sh.t = to.h; sr.x = to.r; ss.x = ss.t = 1; render(); return; }
+    if (!style.lead) { setW(); setH(); }
+    else {
+      // Opening: the leading side moves first. Closing mirrors it, so the way out retraces the way in.
+      const first = opening ? style.lead : (style.lead === 'w' ? 'h' : 'w');
+      (first === 'w' ? setW : setH)();
+      later(first === 'w' ? setH : setW, 85);
+    }
+    if (style.pop && opening) ss.x = Math.min(ss.x, .72);
+    kick();
+  }
+
+  function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+  function frame(now) {
+    raf = 0;
+    const dt = Math.min((now - last) / 1000, 1 / 30); last = now;
+    const n = Math.ceil(dt * 240);
+    for (let i = 0; i < n; i++) {
+      const h = dt / n;
+      sw.step(h, style.response, style.damping); sh.step(h, style.response, style.damping);
+      sr.step(h, .3, 1); ss.step(h, .42, .52);
+    }
+    render();
+    if (open) tick(dt);
+    if (!settled() || open) kick();
+    else { [sw, sh, sr, ss].forEach((s) => { s.x = s.t; s.v = 0; }); render(); }
+  }
+
+  function render() {
+    const w = Math.max(sw.x, 120), h = Math.max(sh.x, 24), r = Math.max(sr.x, 0);
+    island.style.width = w + 'px'; island.style.height = h + 'px';
+    island.style.borderRadius = `0 0 ${r}px ${r}px`;
+    island.style.transform = `translateX(-50%) scale(${ss.x})`;
+    hit.style.width = (w + 36) + 'px'; hit.style.height = (h + 20) + 'px';
+    const p = Math.min(Math.max((w - IDLE.w) / (OPEN.w - IDLE.w), 0), 1);
+    const o = Math.min(Math.max((p - .55) / .4, 0), 1);
+    content.style.opacity = o;
+    content.style.filter = style.blur && o < 1 ? `blur(${(1 - o) * 10}px)` : '';
+    island.classList.toggle('open', open && p > .35);
+  }
+
+  function setOpen(next) {
+    if (next === open) return;
+    open = next;
+    btn.setAttribute('aria-expanded', String(open));
+    setTargets(open);
+    if (open && hint) hint.textContent = 'Drag the progress bar, switch widgets, try a theme or an animation.';
+  }
+
+  // Hover for a mouse; tap or keyboard for everyone else.
+  let closeT = 0, hoverOpenedAt = -1e9;
+  hit.addEventListener('pointerenter', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(closeT);
+    if (!open) hoverOpenedAt = performance.now();
+    setOpen(true);
+  });
+  hit.addEventListener('pointerleave', (e) => {
+    if (e.pointerType !== 'mouse' || dragging) return;
+    closeT = setTimeout(() => setOpen(false), 220);
+  });
+  btn.addEventListener('click', () => {
+    if (performance.now() - hoverOpenedAt < 400) return;        // the hover already opened it
+    setOpen(true);
+    $('.tab[aria-selected="true"]').focus({ preventScroll: true });   // keyboard users land inside
+  });
+  // Clicking or tapping elsewhere closes it, except on the theme and animation pickers (you want to see the result).
+  document.addEventListener('pointerdown', (e) => {
+    if (open && !hit.contains(e.target) && !e.target.closest('.controls')) setOpen(false);
+  });
+  // Scrolling the demo out of view closes it too, so it isn't left open behind you.
+  new IntersectionObserver(([en]) => { if (!en.isIntersecting && open) setOpen(false); }, { threshold: .15 }).observe(mac);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) { setOpen(false); btn.focus({ preventScroll: true }); } });
+
+  // Widgets
+  const tabs = [...document.querySelectorAll('.tab')];
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    tabs.forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+    document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('on', p.id === t.getAttribute('aria-controls')));
+  }));
+
+  // Theme and animation pickers
+  function pick(selector, key, fn) {
+    const items = [...document.querySelectorAll(selector)];
+    items.forEach((b) => b.addEventListener('click', () => {
+      items.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      fn(b.dataset[key]);
+    }));
+  }
+  pick('[data-theme][aria-pressed]', 'theme', (t) => { island.dataset.theme = t; });
+  pick('[data-anim]', 'anim', (a) => {
+    style = STYLES[a];
+    if (!reduce) { setOpen(false); later(() => setOpen(true), 650); }   // replay, so the difference is visible
+  });
+
+  // Now playing: a progress bar tracked 1:1 under the pointer.
+  const track = $('#track'), fill = $('#fill'), knob = $('#knob'), tNow = $('#tNow');
+  const TOTAL = 241; let pos = 87, playing = true;
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  function showPos() {
+    const f = pos / TOTAL;
+    fill.style.width = (f * 100) + '%'; knob.style.left = (f * 100) + '%';
+    tNow.textContent = fmt(pos); track.setAttribute('aria-valuenow', Math.round(pos));
+  }
+  function scrubTo(e) {
+    const r = track.getBoundingClientRect();
+    pos = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) * TOTAL; showPos();
+  }
+  track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); track.classList.add('drag'); scrubTo(e); e.preventDefault(); });
+  track.addEventListener('pointermove', (e) => { if (dragging) scrubTo(e); });
+  const endDrag = () => { dragging = false; track.classList.remove('drag'); };
+  track.addEventListener('pointerup', endDrag); track.addEventListener('pointercancel', endDrag);
+  track.addEventListener('keydown', (e) => {
+    const step = e.key === 'ArrowRight' ? 10 : e.key === 'ArrowLeft' ? -10 : 0;
+    if (step) { pos = Math.min(Math.max(pos + step, 0), TOTAL); showPos(); e.preventDefault(); }
+  });
+  $('#playBtn').addEventListener('click', (e) => {
+    playing = !playing;
+    e.currentTarget.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    $('#playIcon').innerHTML = playing ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+  });
+
+  // Pomodoro: it really counts down.
+  const pTime = $('#pTime'), pMeter = $('#pMeter');
+  let total = 25 * 60, left = 24 * 60 + 29, pRun = true;
+  const showP = () => { pTime.textContent = fmt(left); pMeter.style.width = Math.max(((total - left) / total) * 100, 2) + '%'; };
+  $('#pPlay').addEventListener('click', (e) => {
+    pRun = !pRun;
+    e.currentTarget.setAttribute('aria-label', pRun ? 'Pause' : 'Start');
+    $('#pIcon').innerHTML = pRun ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
+  });
+  $('#pReset').addEventListener('click', () => { left = total; showP(); });
+  document.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach((x) => x.classList.toggle('sel', x === c));
+    total = left = Number(c.dataset.min) * 60; showP();
+  }));
+
+  // One shared clock for the song and the countdown. It only runs while the island is open.
+  let acc = 0;
+  function tick(dt) {
+    if (playing && !dragging) { pos = (pos + dt) % TOTAL; showPos(); }
+    acc += dt;
+    if (acc >= 1) { acc -= 1; if (pRun && left > 0) { left -= 1; showP(); } }
+  }
+  showPos(); showP();
+
+  // Fit the demo to narrow screens.
+  function fit() { wrap.style.transform = `scale(${Math.min(1, (mac.clientWidth - 24) / OPEN.w)})`; }
+  new ResizeObserver(fit).observe(mac); fit();
+  render();
+
+  // Scroll-in
+  const rise = document.querySelectorAll('.rise');
+  if (reduce || !('IntersectionObserver' in window)) rise.forEach((el) => el.classList.add('in'));
+  else {
+    const io = new IntersectionObserver((es) => es.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }), { threshold: .12 });
+    rise.forEach((el) => io.observe(el));
+  }
+})();
+</script>
 </body>
 </html>

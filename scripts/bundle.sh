@@ -11,6 +11,7 @@ VERSION="${3:-0.1.0}"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BINARY" "$APP/Contents/MacOS/Nimbus"
+cp assets/AppIcon.icns assets/MenuBarIcon.png "$APP/Contents/Resources/"
 for f in Shortcuts/*.shortcut; do
     case "$f" in *unsigned*) ;; *) cp "$f" "$APP/Contents/Resources/" ;; esac
 done 2>/dev/null || echo "Note: no signed shortcuts found, run scripts/make_shortcut.py"
@@ -23,6 +24,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIdentifier</key><string>dev.nimbus.app</string>
     <key>CFBundleName</key><string>Nimbus</string>
     <key>CFBundleExecutable</key><string>Nimbus</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$VERSION</string>

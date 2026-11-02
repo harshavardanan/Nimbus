@@ -74,10 +74,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func installStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(
-            systemSymbolName: "rectangle.topthird.inset.filled",
-            accessibilityDescription: "Nimbus"
-        )
+        // The island glyph from the app bundle; the system symbol is the fallback (e.g. `swift run`).
+        if let url = Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
+           let glyph = NSImage(contentsOf: url) {
+            glyph.size = NSSize(width: 18, height: 18)
+            glyph.isTemplate = true // adapts to a light or dark menu bar
+            glyph.accessibilityDescription = "Nimbus"
+            item.button?.image = glyph
+        } else {
+            item.button?.image = NSImage(
+                systemSymbolName: "rectangle.topthird.inset.filled",
+                accessibilityDescription: "Nimbus"
+            )
+        }
 
         let menu = NSMenu()
         let about = NSMenuItem(title: "About Nimbus", action: #selector(showAbout), keyEquivalent: "")

@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/icon.png" alt="Nimbus app icon" width="128"></p>
+
 <h1 align="center">Nimbus</h1>
 
 <p align="center">
