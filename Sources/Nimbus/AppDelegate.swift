@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Handy for screenshots: NIMBUS_SETTINGS=1 opens the window at launch.
         if ProcessInfo.processInfo.environment["NIMBUS_SETTINGS"] != nil { settingsWindow.show() }
+        if ProcessInfo.processInfo.environment["NIMBUS_ABOUT"] != nil { showAbout() }
     }
 
     private static func dump(_ state: IslandState) -> String {
@@ -79,7 +80,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         let menu = NSMenu()
-        menu.addItem(withTitle: "Nimbus", action: nil, keyEquivalent: "")
+        let about = NSMenuItem(title: "About Nimbus", action: #selector(showAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
         menu.addItem(.separator())
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
@@ -88,6 +91,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: "Quit Nimbus", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.menu = menu
         statusItem = item
+    }
+
+    /// The standard About window, with the developer credit.
+    @objc private func showAbout() {
+        NSApp.activate(ignoringOtherApps: true)
+        let center = NSMutableParagraphStyle()
+        center.alignment = .center
+        let credits = NSMutableAttributedString(
+            string: "Developed by Harshavardanan\n",
+            attributes: [.font: NSFont.systemFont(ofSize: 12, weight: .medium), .paragraphStyle: center]
+        )
+        credits.append(NSAttributedString(
+            string: "github.com/harshavardanan/Nimbus",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 11),
+                .link: URL(string: "https://github.com/harshavardanan/Nimbus") as Any,
+                .paragraphStyle: center,
+            ]
+        ))
+        NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "Nimbus", .credits: credits])
     }
 
     @objc private func openSettings() {

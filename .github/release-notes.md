@@ -16,3 +16,5 @@ Nimbus has no Dock icon. Look for its icon at the top right of your menu bar, an
 The zip also contains a **How to open Nimbus** note with the same steps.
 
 Full details: https://github.com/harshavardanan/Nimbus#readme
+
+Developed by [Harshavardanan](https://github.com/harshavardanan). Free and open source (MIT).

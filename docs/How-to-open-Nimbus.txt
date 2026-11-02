@@ -31,3 +31,4 @@ Open the Terminal app, paste this line, press Return, then open Nimbus again:
   xattr -dr com.apple.quarantine /Applications/Nimbus.app
 
 More help: https://github.com/harshavardanan/Nimbus
+Developed by Harshavardanan. Free and open source.

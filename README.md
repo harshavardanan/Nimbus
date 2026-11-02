@@ -13,6 +13,8 @@ to start), and opens into a full widget when you hover it.
 
 Built with SwiftUI and AppKit. No account, no tracking, no server of ours.
 
+Developed by [Harshavardanan](https://github.com/harshavardanan).
+
 > **Status: early (v0.1).** It works and is tested on a notched MacBook. It isn't notarized yet, so macOS asks
 > you to allow it once. See [Known limitations](#known-limitations).
 
@@ -164,4 +166,4 @@ Handy environment variables for development (set with `open --env NAME=value bui
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Developed by [Harshavardanan](https://github.com/harshavardanan).
